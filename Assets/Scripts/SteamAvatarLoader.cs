@@ -1,6 +1,6 @@
 using UnityEngine;
 using Steamworks;
-using System.Collections;
+using System.Collections.Generic;
 
 public class SteamAvatarLoader : MonoBehaviour
 {
@@ -19,24 +19,71 @@ public class SteamAvatarLoader : MonoBehaviour
         }
     }
 
+    // Cache avatars
+    private Dictionary<CSteamID, Texture2D> avatarCache = new Dictionary<CSteamID, Texture2D>();
+
+    // Callback for når avatars er loaded
+    private Callback<AvatarImageLoaded_t> avatarLoaded;
+
+    // Event for når et avatar er klar
+    public System.Action<CSteamID, Texture2D> OnAvatarLoaded;
+
+    void Awake()
+    {
+        avatarLoaded = Callback<AvatarImageLoaded_t>.Create(OnAvatarImageLoaded);
+    }
+
+    private void OnAvatarImageLoaded(AvatarImageLoaded_t callback)
+    {
+        CSteamID steamID = callback.m_steamID;
+        Debug.Log($"[AVATAR] Avatar loaded for {SteamFriends.GetFriendPersonaName(steamID)}");
+
+        // Hent det nye avatar
+        Texture2D avatar = GetSteamAvatar(steamID);
+
+        if (avatar != null)
+        {
+            // Gem i cache
+            avatarCache[steamID] = avatar;
+
+            // Notify listeners
+            OnAvatarLoaded?.Invoke(steamID, avatar);
+        }
+    }
+
     public Texture2D GetSteamAvatar(CSteamID steamID)
     {
+        // Check cache først
+        if (avatarCache.ContainsKey(steamID))
+        {
+            Debug.Log($"[AVATAR] Returning cached avatar for {steamID}");
+            return avatarCache[steamID];
+        }
+
         // Hent large avatar (184x184)
         int avatarHandle = SteamFriends.GetLargeFriendAvatar(steamID);
 
         if (avatarHandle == -1)
         {
-            Debug.LogWarning($"Avatar not ready for {steamID}, requesting...");
-            return null;
+            Debug.LogWarning($"[AVATAR] Avatar not ready for {steamID}, will load asynchronously...");
+            return CreateDefaultAvatar(); // Return placeholder
         }
 
         if (avatarHandle == 0)
         {
-            Debug.LogWarning($"No avatar for {steamID}");
+            Debug.LogWarning($"[AVATAR] No avatar for {steamID}");
             return CreateDefaultAvatar();
         }
 
-        return GetTextureFromAvatar(avatarHandle);
+        Texture2D texture = GetTextureFromAvatar(avatarHandle);
+
+        // Cache det
+        if (texture != null)
+        {
+            avatarCache[steamID] = texture;
+        }
+
+        return texture;
     }
 
     private Texture2D GetTextureFromAvatar(int avatarHandle)
@@ -46,7 +93,7 @@ public class SteamAvatarLoader : MonoBehaviour
 
         if (!success || width == 0 || height == 0)
         {
-            Debug.LogWarning("Failed to get avatar size");
+            Debug.LogWarning("[AVATAR] Failed to get avatar size");
             return CreateDefaultAvatar();
         }
 
@@ -58,7 +105,7 @@ public class SteamAvatarLoader : MonoBehaviour
 
         if (!success)
         {
-            Debug.LogWarning("Failed to get avatar image data");
+            Debug.LogWarning("[AVATAR] Failed to get avatar image data");
             return CreateDefaultAvatar();
         }
 
