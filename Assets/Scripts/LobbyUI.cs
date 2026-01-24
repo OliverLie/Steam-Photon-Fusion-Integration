@@ -22,6 +22,8 @@ public class LobbyUI : MonoBehaviour
 
     void Start()
     {
+        Debug.Log("[UI] Setting up LobbyUI...");
+
         createLobbyButton.onClick.AddListener(OnCreateLobby);
         inviteFriendsButton.onClick.AddListener(OnInviteFriends);
         leaveLobbyButton.onClick.AddListener(OnLeaveLobby);
@@ -30,6 +32,8 @@ public class LobbyUI : MonoBehaviour
         lobbyManager.OnPhotonSessionJoined.AddListener(OnLobbyJoined);
         lobbyManager.OnLobbyCreateFailed.AddListener(OnLobbyFailed);
         lobbyManager.OnLobbyMembersUpdated.AddListener(UpdatePlayerList);
+
+        Debug.Log("[UI] Listeners added, including OnLobbyMembersUpdated");
 
         UpdateUI();
     }
@@ -88,7 +92,8 @@ public class LobbyUI : MonoBehaviour
 
     void UpdatePlayerList()
     {
-        Debug.Log("[UI] UpdatePlayerList called");
+        Debug.Log("[UI] ========== UPDATE PLAYER LIST ==========");
+        Debug.Log($"[UI] In lobby: {lobbyManager.IsInLobby}");
 
         if (!lobbyManager.IsInLobby)
         {
@@ -96,25 +101,24 @@ public class LobbyUI : MonoBehaviour
             return;
         }
 
-        // Clear existing
         ClearPlayerList();
 
-        // Get members
         LobbyMemberData[] members = lobbyManager.GetLobbyMembers();
-        Debug.Log($"[UI] Found {members.Length} members");
+        Debug.Log($"[UI] Found {members.Length} members to display");
 
-        // Create UI for each
         foreach (var member in members)
         {
-            Debug.Log($"[UI] Creating UI for: {member.playerName}");
+            Debug.Log($"[UI]   - Creating UI for: {member.playerName} (Host: {member.isHost})");
 
-            // VIGTIGT: Instantiate med parent!
             LobbyMemberUI memberUI = Instantiate(memberPrefab, playerListContainer);
             memberUI.SetMemberData(member);
             activeMemberUIs.Add(memberUI);
         }
 
         Debug.Log($"[UI] Created {activeMemberUIs.Count} UI elements");
+        Debug.Log("[UI] ========================================");
+
+        Canvas.ForceUpdateCanvases();
     }
 
     void ClearPlayerList()

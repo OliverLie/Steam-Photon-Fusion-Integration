@@ -35,12 +35,16 @@ public class SteamLobbyManager : MonoBehaviour
             return;
         }
 
+        Debug.Log("[STEAM] Registering callbacks...");
+
         // Register callbacks
         lobbyCreated = Callback<LobbyCreated_t>.Create(OnLobbyCreated);
         lobbyEntered = Callback<LobbyEnter_t>.Create(OnLobbyEntered);
         lobbyJoinRequested = Callback<GameLobbyJoinRequested_t>.Create(OnLobbyJoinRequested);
         lobbyList = Callback<LobbyMatchList_t>.Create(OnLobbyList);
         lobbyChatUpdate = Callback<LobbyChatUpdate_t>.Create(OnLobbyChatUpdate);
+
+        Debug.Log("[STEAM] Callbacks registered!");
     }
 
     #region Public Methods
@@ -67,6 +71,11 @@ public class SteamLobbyManager : MonoBehaviour
 
         string userName = SteamFriends.GetFriendPersonaName(userChanged);
 
+        Debug.Log($"[STEAM] ============ LOBBY CHAT UPDATE ============");
+        Debug.Log($"[STEAM] User: {userName} ({userChanged})");
+        Debug.Log($"[STEAM] State Change: {stateChange}");
+        Debug.Log($"[STEAM] Current member count: {SteamMatchmaking.GetNumLobbyMembers(currentLobbyID)}");
+
         switch (stateChange)
         {
             case EChatMemberStateChange.k_EChatMemberStateChangeEntered:
@@ -80,8 +89,12 @@ public class SteamLobbyManager : MonoBehaviour
                 break;
         }
 
+        Debug.Log($"[STEAM] Invoking OnLobbyMembersUpdated event...");
+
         // Trigger update event
         OnLobbyMembersUpdated?.Invoke();
+
+        Debug.Log($"[STEAM] ============================================");
     }
 
     // Hent alle lobby members
