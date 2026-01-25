@@ -50,6 +50,7 @@ public class SteamManager : MonoBehaviour
     {
         if (IsInitialized)
         {
+            // Required to receive Steam callbacks
             SteamAPI.RunCallbacks();
         }
     }

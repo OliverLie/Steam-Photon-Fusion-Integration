@@ -12,7 +12,6 @@ public class LobbyMemberListUI : MonoBehaviour
 
     void Start()
     {
-        // Lyt til lobby updates
         lobbyManager.OnPhotonSessionCreated.AddListener(OnLobbyChanged);
         lobbyManager.OnPhotonSessionJoined.AddListener(OnLobbyChanged);
         lobbyManager.OnLobbyMembersUpdated.AddListener(UpdateMemberList);
@@ -20,25 +19,21 @@ public class LobbyMemberListUI : MonoBehaviour
 
     void OnLobbyChanged(string sessionName)
     {
-        // Når vi joiner/creater lobby, update listen
-        Invoke(nameof(UpdateMemberList), 0.5f); // Lille delay så Steam kan opdatere
+        // Delay allows Steam to update member list before rendering
+        Invoke(nameof(UpdateMemberList), 0.5f);
     }
 
     public void UpdateMemberList()
     {
-        // Clear existing UI
         foreach (var memberUI in activeMemberUIs)
         {
             Destroy(memberUI.gameObject);
         }
         activeMemberUIs.Clear();
 
-        // Get current lobby members
         LobbyMemberData[] members = lobbyManager.GetLobbyMembers();
-
         Debug.Log($"[UI] Updating lobby member list: {members.Length} members");
 
-        // Create UI for each member
         foreach (var member in members)
         {
             LobbyMemberUI memberUI = Instantiate(memberPrefab, memberListContainer);

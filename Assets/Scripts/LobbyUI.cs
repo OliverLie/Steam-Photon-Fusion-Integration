@@ -22,10 +22,11 @@ public class LobbyUI : MonoBehaviour
     [SerializeField] private GameObject PlayerListPanel;
 
     [Header("Player List")]
-    [SerializeField] private string playerListContainerName = "Content"; // Navn på Content GameObject
-    [SerializeField] private LobbyMemberUI memberPrefab; // Dette overlever da det er en prefab asset
+    [SerializeField] private string playerListContainerName = "Content";
+    [SerializeField] private LobbyMemberUI memberPrefab;
 
-    private Transform playerListContainer; // Ikke serialized - finder den runtime
+    // Not serialized - found at runtime to survive scene changes
+    private Transform playerListContainer;
     private List<LobbyMemberUI> activeMemberUIs = new List<LobbyMemberUI>();
     private bool isInitialized = false;
 
@@ -45,10 +46,7 @@ public class LobbyUI : MonoBehaviour
     {
         Debug.Log("[UI] Initializing UI...");
 
-        // Find SteamLobbyManager
         FindLobbyManager();
-
-        // Find PlayerListContainer
         FindPlayerListContainer();
 
         if (lobbyManager == null)
@@ -66,7 +64,7 @@ public class LobbyUI : MonoBehaviour
         Debug.Log($"[UI] playerListContainer found: {playerListContainer.name}");
         Debug.Log($"[UI] memberPrefab is null: {memberPrefab == null}");
 
-        // Setup button listeners (kun én gang)
+        // Only initialize button listeners once to avoid duplicates
         if (!isInitialized)
         {
             createLobbyButton.onClick.RemoveAllListeners();
@@ -83,7 +81,7 @@ public class LobbyUI : MonoBehaviour
             Debug.Log("[UI] Button listeners initialized");
         }
 
-        // Setup lobby manager listeners (remove old først)
+        // Remove old listeners before adding new ones to prevent duplicates
         lobbyManager.OnPhotonSessionCreated.RemoveListener(OnLobbyCreated);
         lobbyManager.OnPhotonSessionJoined.RemoveListener(OnLobbyJoined);
         lobbyManager.OnLobbyCreateFailed.RemoveListener(OnLobbyFailed);
@@ -119,10 +117,8 @@ public class LobbyUI : MonoBehaviour
 
     private void FindPlayerListContainer()
     {
-        // Find Content GameObject under PlayerListPanel
         if (PlayerListPanel != null)
         {
-            // Søg efter Content i alle children
             Transform[] children = PlayerListPanel.GetComponentsInChildren<Transform>(true);
 
             foreach (Transform child in children)
@@ -149,11 +145,10 @@ public class LobbyUI : MonoBehaviour
 
         EnsureSingleEventSystem();
 
-        // VIGTIGT: Re-find alle references efter scene load
+        // Re-find references after scene load since they may have been destroyed
         FindLobbyManager();
         FindPlayerListContainer();
 
-        // Re-initialize hvis nødvendigt
         if (lobbyManager != null && playerListContainer != null)
         {
             InitializeUI();
@@ -171,17 +166,16 @@ public class LobbyUI : MonoBehaviour
         Debug.Log("[UI] ========== BACK TO MENU ==========");
         Debug.Log($"[UI] Currently in lobby: {(lobbyManager != null ? lobbyManager.IsInLobby.ToString() : "null")}");
 
-        // Leave lobby FØRST
+        // Leave lobby before scene change to prevent state issues
         if (lobbyManager != null && lobbyManager.IsInLobby)
         {
             Debug.Log("[UI] Leaving lobby before scene change...");
             lobbyManager.LeaveLobby();
         }
 
-        // Clear UI
         ClearPlayerList();
 
-        // Find og shutdown Photon runner
+        // Shutdown Photon runner if it exists
         NetworkRunner runner = FindFirstObjectByType<NetworkRunner>();
         if (runner != null)
         {
@@ -227,7 +221,7 @@ public class LobbyUI : MonoBehaviour
         statusText.text = "Lobby created! Waiting for players...";
         UpdateUI();
 
-        // Re-find container før update (safety check)
+        // Safety check: re-find container if lost
         if (playerListContainer == null)
         {
             Debug.LogWarning("[UI] playerListContainer null before UpdatePlayerList, re-finding...");
@@ -243,7 +237,7 @@ public class LobbyUI : MonoBehaviour
         statusText.text = "Joined lobby! Connecting...";
         UpdateUI();
 
-        // Re-find container før update (safety check)
+        // Safety check: re-find container if lost
         if (playerListContainer == null)
         {
             Debug.LogWarning("[UI] playerListContainer null before UpdatePlayerList, re-finding...");
@@ -285,6 +279,7 @@ public class LobbyUI : MonoBehaviour
     {
         int sceneIndex = SceneManager.GetActiveScene().buildIndex;
 
+        // Avoid redundant updates
         if (sceneIndex == currentSceneIndex)
             return;
 
@@ -292,27 +287,23 @@ public class LobbyUI : MonoBehaviour
 
         Debug.Log($"[UI] Updating UI for scene index: {sceneIndex}");
 
-        if (sceneIndex == mainMenu) // LOBBY/MAIN MENU SCENE
+        if (sceneIndex == mainMenu)
         {
-            // Lobby UI - synlig i main menu
             createLobbyButton.gameObject.SetActive(true);
-            inviteFriendsButton.gameObject.SetActive(true);
-            leaveLobbyButton.gameObject.SetActive(true);
+            inviteFriendsButton.gameObject.SetActive(false);
+            leaveLobbyButton.gameObject.SetActive(false);
             statusText.gameObject.SetActive(true);
 
-            // Game UI - skjult i main menu
             backToMenuButton.gameObject.SetActive(false);
             PlayerListPanel.SetActive(false);
         }
-        else // GAME SCENE
+        else
         {
-            // Lobby controls - stadig tilgængelige i game
-            createLobbyButton.gameObject.SetActive(false);     // Ikke nødvendigt i game
-            inviteFriendsButton.gameObject.SetActive(true);    // ← KAN INVITERE I GAME
-            leaveLobbyButton.gameObject.SetActive(true);       // ← KAN LEAVE I GAME
-            statusText.gameObject.SetActive(false);            // Ikke nødvendigt i game
+            createLobbyButton.gameObject.SetActive(false);
+            inviteFriendsButton.gameObject.SetActive(true);
+            leaveLobbyButton.gameObject.SetActive(true);
+            statusText.gameObject.SetActive(false);
 
-            // Game UI - synlig i game
             backToMenuButton.gameObject.SetActive(true);
             PlayerListPanel.SetActive(true);
         }
@@ -322,7 +313,7 @@ public class LobbyUI : MonoBehaviour
     {
         Debug.Log("[UI] ========== UPDATE PLAYER LIST ==========");
 
-        // Triple check alt er ready
+        // Verify all required components exist
         if (lobbyManager == null)
         {
             Debug.LogError("[UI] lobbyManager is null!");
@@ -411,6 +402,7 @@ public class LobbyUI : MonoBehaviour
 
             EventSystem persistentEventSystem = null;
 
+            // Prefer EventSystem in DontDestroyOnLoad
             foreach (var es in eventSystems)
             {
                 if (es.gameObject.scene.name == "DontDestroyOnLoad")
@@ -427,6 +419,7 @@ public class LobbyUI : MonoBehaviour
                 Debug.Log($"[UI] Moved {persistentEventSystem.gameObject.name} to DontDestroyOnLoad");
             }
 
+            // Destroy all duplicates
             foreach (var es in eventSystems)
             {
                 if (es != persistentEventSystem)

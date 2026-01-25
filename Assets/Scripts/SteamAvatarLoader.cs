@@ -19,13 +19,9 @@ public class SteamAvatarLoader : MonoBehaviour
         }
     }
 
-    // Cache avatars
     private Dictionary<CSteamID, Texture2D> avatarCache = new Dictionary<CSteamID, Texture2D>();
-
-    // Callback for når avatars er loaded
     private Callback<AvatarImageLoaded_t> avatarLoaded;
 
-    // Event for når et avatar er klar
     public System.Action<CSteamID, Texture2D> OnAvatarLoaded;
 
     void Awake()
@@ -38,35 +34,31 @@ public class SteamAvatarLoader : MonoBehaviour
         CSteamID steamID = callback.m_steamID;
         Debug.Log($"[AVATAR] Avatar loaded for {SteamFriends.GetFriendPersonaName(steamID)}");
 
-        // Hent det nye avatar
         Texture2D avatar = GetSteamAvatar(steamID);
 
         if (avatar != null)
         {
-            // Gem i cache
             avatarCache[steamID] = avatar;
-
-            // Notify listeners
             OnAvatarLoaded?.Invoke(steamID, avatar);
         }
     }
 
     public Texture2D GetSteamAvatar(CSteamID steamID)
     {
-        // Check cache først
         if (avatarCache.ContainsKey(steamID))
         {
             Debug.Log($"[AVATAR] Returning cached avatar for {steamID}");
             return avatarCache[steamID];
         }
 
-        // Hent large avatar (184x184)
+        // Request large avatar (184x184)
         int avatarHandle = SteamFriends.GetLargeFriendAvatar(steamID);
 
         if (avatarHandle == -1)
         {
+            // Avatar is being downloaded asynchronously
             Debug.LogWarning($"[AVATAR] Avatar not ready for {steamID}, will load asynchronously...");
-            return CreateDefaultAvatar(); // Return placeholder
+            return CreateDefaultAvatar();
         }
 
         if (avatarHandle == 0)
@@ -77,7 +69,6 @@ public class SteamAvatarLoader : MonoBehaviour
 
         Texture2D texture = GetTextureFromAvatar(avatarHandle);
 
-        // Cache det
         if (texture != null)
         {
             avatarCache[steamID] = texture;
@@ -88,7 +79,6 @@ public class SteamAvatarLoader : MonoBehaviour
 
     private Texture2D GetTextureFromAvatar(int avatarHandle)
     {
-        // Hent avatar dimensioner
         bool success = SteamUtils.GetImageSize(avatarHandle, out uint width, out uint height);
 
         if (!success || width == 0 || height == 0)
@@ -97,10 +87,7 @@ public class SteamAvatarLoader : MonoBehaviour
             return CreateDefaultAvatar();
         }
 
-        // Allokér buffer til RGBA data
         byte[] imageBuffer = new byte[width * height * 4];
-
-        // Hent image data
         success = SteamUtils.GetImageRGBA(avatarHandle, imageBuffer, (int)(width * height * 4));
 
         if (!success)
@@ -109,11 +96,10 @@ public class SteamAvatarLoader : MonoBehaviour
             return CreateDefaultAvatar();
         }
 
-        // Opret texture
         Texture2D texture = new Texture2D((int)width, (int)height, TextureFormat.RGBA32, false);
         texture.filterMode = FilterMode.Bilinear;
 
-        // Load pixel data (Steam giver RGBA, men Unity bruger row-order omvendt)
+        // Steam provides RGBA data in top-down order, Unity expects bottom-up
         for (int y = 0; y < height; y++)
         {
             for (int x = 0; x < width; x++)
@@ -121,10 +107,10 @@ public class SteamAvatarLoader : MonoBehaviour
                 int index = (int)((y * width + x) * 4);
 
                 Color pixel = new Color32(
-                    imageBuffer[index],     // R
-                    imageBuffer[index + 1], // G
-                    imageBuffer[index + 2], // B
-                    imageBuffer[index + 3]  // A
+                    imageBuffer[index],
+                    imageBuffer[index + 1],
+                    imageBuffer[index + 2],
+                    imageBuffer[index + 3]
                 );
 
                 texture.SetPixel(x, (int)height - y - 1, pixel);
@@ -137,7 +123,6 @@ public class SteamAvatarLoader : MonoBehaviour
 
     private Texture2D CreateDefaultAvatar()
     {
-        // Opret en simpel grå placeholder
         Texture2D texture = new Texture2D(184, 184);
         Color[] pixels = new Color[184 * 184];
         for (int i = 0; i < pixels.Length; i++)

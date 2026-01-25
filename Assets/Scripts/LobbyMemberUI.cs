@@ -14,7 +14,6 @@ public class LobbyMemberUI : MonoBehaviour
 
     void Start()
     {
-        // Lyt til avatar loaded events
         SteamAvatarLoader.Instance.OnAvatarLoaded += OnAvatarLoaded;
     }
 
@@ -27,11 +26,8 @@ public class LobbyMemberUI : MonoBehaviour
     {
         memberSteamID = data.steamID;
         playerNameText.text = data.playerName;
-
-        // Set avatar
         UpdateAvatar(data.avatar);
 
-        // Set host crown
         if (hostCrown != null)
         {
             hostCrown.SetActive(data.isHost);
@@ -40,7 +36,7 @@ public class LobbyMemberUI : MonoBehaviour
 
     private void OnAvatarLoaded(CSteamID steamID, Texture2D avatar)
     {
-        // Check hvis det er vores spiller
+        // Only update if this is the avatar for our displayed player
         if (steamID == memberSteamID)
         {
             Debug.Log($"[UI] Avatar loaded for {SteamFriends.GetFriendPersonaName(steamID)}, updating UI");

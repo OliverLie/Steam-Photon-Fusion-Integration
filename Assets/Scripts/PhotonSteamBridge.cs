@@ -11,7 +11,7 @@ public class PhotonSteamBridge : MonoBehaviour, INetworkRunnerCallbacks
     [SerializeField] private SteamLobbyManager steamLobbyManager;
 
     [Header("Settings")]
-    [SerializeField] private SceneRef targetScene; // CHANGED: Nu SceneReference i stedet for int
+    [SerializeField] private SceneRef targetScene;
 
     private NetworkRunner runner;
     private bool isStarting = false;
@@ -33,7 +33,7 @@ public class PhotonSteamBridge : MonoBehaviour, INetworkRunnerCallbacks
         isStarting = true;
         Debug.Log($"[PHOTON] Starting as HOST for session: {sessionName}");
 
-        // Tjek om vi allerede har en runner
+        // Clean up existing runner if present
         if (runner != null)
         {
             Debug.LogWarning("[PHOTON] Runner already exists, shutting it down first...");
@@ -42,7 +42,6 @@ public class PhotonSteamBridge : MonoBehaviour, INetworkRunnerCallbacks
             runner = null;
         }
 
-        // Opret ny runner
         runner = Instantiate(runnerPrefab);
         runner.name = "NetworkRunner_Host";
         runner.AddCallbacks(this);
@@ -53,22 +52,21 @@ public class PhotonSteamBridge : MonoBehaviour, INetworkRunnerCallbacks
         {
             GameMode = GameMode.Host,
             SessionName = sessionName,
-            Scene = targetScene, // Nu en SceneReference
+            Scene = targetScene,
             SceneManager = gameObject.AddComponent<NetworkSceneManagerDefault>()
         });
 
         if (result.Ok)
         {
-            Debug.Log("[PHOTON] ✓ Host started successfully!");
+            Debug.Log("[PHOTON] Host started successfully!");
             isStarting = false;
         }
         else
         {
-            Debug.LogError($"[PHOTON] ✗ Failed to start Host: {result.ShutdownReason}");
+            Debug.LogError($"[PHOTON] Failed to start Host: {result.ShutdownReason}");
             Debug.LogError($"[PHOTON] Error Message: {result.ErrorMessage}");
             isStarting = false;
 
-            // Leave Steam lobby hvis Photon fejler
             steamLobbyManager.LeaveLobby();
         }
     }
@@ -84,7 +82,7 @@ public class PhotonSteamBridge : MonoBehaviour, INetworkRunnerCallbacks
         isStarting = true;
         Debug.Log($"[PHOTON] Joining as CLIENT for session: {sessionName}");
 
-        // Tjek om vi allerede har en runner
+        // Clean up existing runner if present
         if (runner != null)
         {
             Debug.LogWarning("[PHOTON] Runner already exists, shutting it down first...");
@@ -93,7 +91,6 @@ public class PhotonSteamBridge : MonoBehaviour, INetworkRunnerCallbacks
             runner = null;
         }
 
-        // Opret ny runner
         runner = Instantiate(runnerPrefab);
         runner.name = "NetworkRunner_Client";
         runner.AddCallbacks(this);
@@ -104,22 +101,21 @@ public class PhotonSteamBridge : MonoBehaviour, INetworkRunnerCallbacks
         {
             GameMode = GameMode.Client,
             SessionName = sessionName,
-            Scene = targetScene, // Nu en SceneReference
+            Scene = targetScene,
             SceneManager = gameObject.AddComponent<NetworkSceneManagerDefault>()
         });
 
         if (result.Ok)
         {
-            Debug.Log("[PHOTON] ✓ Client joined successfully!");
+            Debug.Log("[PHOTON] Client joined successfully!");
             isStarting = false;
         }
         else
         {
-            Debug.LogError($"[PHOTON] ✗ Failed to join: {result.ShutdownReason}");
+            Debug.LogError($"[PHOTON] Failed to join: {result.ShutdownReason}");
             Debug.LogError($"[PHOTON] Error Message: {result.ErrorMessage}");
             isStarting = false;
 
-            // Leave Steam lobby hvis Photon fejler
             steamLobbyManager.LeaveLobby();
         }
     }
@@ -128,7 +124,7 @@ public class PhotonSteamBridge : MonoBehaviour, INetworkRunnerCallbacks
 
     public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
     {
-        Debug.Log($"[PHOTON] ✓ Player joined: {player}");
+        Debug.Log($"[PHOTON] Player joined: {player}");
     }
 
     public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
@@ -140,15 +136,12 @@ public class PhotonSteamBridge : MonoBehaviour, INetworkRunnerCallbacks
     {
         Debug.LogWarning($"[PHOTON] Shutdown called! Reason: {shutdownReason}");
 
-        // Clean up runner
         if (this.runner == runner)
         {
             this.runner = null;
         }
 
-        // Leave Steam lobby
         steamLobbyManager.LeaveLobby();
-
         isStarting = false;
     }
 
@@ -174,7 +167,7 @@ public class PhotonSteamBridge : MonoBehaviour, INetworkRunnerCallbacks
 
     public void OnSceneLoadDone(NetworkRunner runner)
     {
-        Debug.Log($"[PHOTON] ✓ Scene load done!");
+        Debug.Log($"[PHOTON] Scene load done!");
     }
 
     public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token) { }

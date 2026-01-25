@@ -9,21 +9,20 @@ public class SteamLobbyManager : MonoBehaviour
     [SerializeField] private ELobbyType lobbyType = ELobbyType.k_ELobbyTypeFriendsOnly;
 
     [Header("Events")]
-    public UnityEvent<string> OnPhotonSessionCreated;  // RENAMED
-    public UnityEvent<string> OnPhotonSessionJoined;   // RENAMED
-    public UnityEvent<string> OnLobbyCreateFailed;     // RENAMED
-    public UnityEvent<string> OnLobbyJoinFailed;       // RENAMED
+    public UnityEvent<string> OnPhotonSessionCreated;
+    public UnityEvent<string> OnPhotonSessionJoined;
+    public UnityEvent<string> OnLobbyCreateFailed;
+    public UnityEvent<string> OnLobbyJoinFailed;
+
     [Header("Lobby Members")]
     public UnityEvent OnLobbyMembersUpdated;
 
     private Callback<LobbyChatUpdate_t> lobbyChatUpdate;
-    // Steam callbacks
     private Callback<LobbyCreated_t> lobbyCreated;
     private Callback<LobbyEnter_t> lobbyEntered;
     private Callback<GameLobbyJoinRequested_t> lobbyJoinRequested;
     private Callback<LobbyMatchList_t> lobbyList;
 
-    // Current lobby
     private CSteamID currentLobbyID;
     public bool IsInLobby => currentLobbyID.IsValid();
 
@@ -37,7 +36,6 @@ public class SteamLobbyManager : MonoBehaviour
 
         Debug.Log("[STEAM] Registering callbacks...");
 
-        // Register callbacks
         lobbyCreated = Callback<LobbyCreated_t>.Create(OnLobbyCreated);
         lobbyEntered = Callback<LobbyEnter_t>.Create(OnLobbyEntered);
         lobbyJoinRequested = Callback<GameLobbyJoinRequested_t>.Create(OnLobbyJoinRequested);
@@ -60,7 +58,7 @@ public class SteamLobbyManager : MonoBehaviour
             return;
         }
 
-        // VIGTIGT: Hvis vi allerede er i en lobby, leave først!
+        // Leave existing lobby to avoid conflicts
         if (IsInLobby)
         {
             Debug.LogWarning("[STEAM] Already in lobby! Leaving first...");
@@ -70,67 +68,7 @@ public class SteamLobbyManager : MonoBehaviour
         Debug.Log($"Creating Steam lobby (Max players: {maxPlayers})...");
         SteamMatchmaking.CreateLobby(lobbyType, maxPlayers);
     }
-    // Callback når folk joiner/leaver
-    private void OnLobbyChatUpdate(LobbyChatUpdate_t callback)
-    {
-        CSteamID lobbyID = new CSteamID(callback.m_ulSteamIDLobby);
-        CSteamID userChanged = new CSteamID(callback.m_ulSteamIDUserChanged);
 
-        EChatMemberStateChange stateChange = (EChatMemberStateChange)callback.m_rgfChatMemberStateChange;
-
-        string userName = SteamFriends.GetFriendPersonaName(userChanged);
-
-        Debug.Log($"[STEAM] ============ LOBBY CHAT UPDATE ============");
-        Debug.Log($"[STEAM] User: {userName} ({userChanged})");
-        Debug.Log($"[STEAM] State Change: {stateChange}");
-        Debug.Log($"[STEAM] Current member count: {SteamMatchmaking.GetNumLobbyMembers(currentLobbyID)}");
-
-        switch (stateChange)
-        {
-            case EChatMemberStateChange.k_EChatMemberStateChangeEntered:
-                Debug.Log($"[STEAM] {userName} joined the lobby");
-                break;
-            case EChatMemberStateChange.k_EChatMemberStateChangeLeft:
-                Debug.Log($"[STEAM] {userName} left the lobby");
-                break;
-            case EChatMemberStateChange.k_EChatMemberStateChangeDisconnected:
-                Debug.Log($"[STEAM] {userName} disconnected");
-                break;
-        }
-
-        Debug.Log($"[STEAM] Invoking OnLobbyMembersUpdated event...");
-
-        // Trigger update event
-        OnLobbyMembersUpdated?.Invoke();
-
-        Debug.Log($"[STEAM] ============================================");
-    }
-
-    // Hent alle lobby members
-    public LobbyMemberData[] GetLobbyMembers()
-    {
-        if (!IsInLobby)
-        {
-            return new LobbyMemberData[0];
-        }
-
-        int memberCount = SteamMatchmaking.GetNumLobbyMembers(currentLobbyID);
-        LobbyMemberData[] members = new LobbyMemberData[memberCount];
-
-        CSteamID lobbyOwner = SteamMatchmaking.GetLobbyOwner(currentLobbyID);
-
-        for (int i = 0; i < memberCount; i++)
-        {
-            CSteamID memberID = SteamMatchmaking.GetLobbyMemberByIndex(currentLobbyID, i);
-            members[i] = new LobbyMemberData(memberID);
-            members[i].isHost = (memberID == lobbyOwner);
-
-            // Hent avatar
-            members[i].avatar = SteamAvatarLoader.Instance.GetSteamAvatar(memberID);
-        }
-
-        return members;
-    }
     public void LeaveLobby()
     {
         Debug.Log($"[STEAM] LeaveLobby called. IsInLobby: {IsInLobby}");
@@ -156,16 +94,37 @@ public class SteamLobbyManager : MonoBehaviour
             return;
         }
 
-        // Åbner Steam overlay friend list til invites
         SteamFriends.ActivateGameOverlayInviteDialog(currentLobbyID);
     }
 
     public void FindLobbies()
     {
-        // Tilføj filtre hvis nødvendigt
+        // Add filters before calling if needed
         // SteamMatchmaking.AddRequestLobbyListStringFilter("game_version", "1.0", ELobbyComparison.k_ELobbyComparisonEqual);
-
         SteamMatchmaking.RequestLobbyList();
+    }
+
+    public LobbyMemberData[] GetLobbyMembers()
+    {
+        if (!IsInLobby)
+        {
+            return new LobbyMemberData[0];
+        }
+
+        int memberCount = SteamMatchmaking.GetNumLobbyMembers(currentLobbyID);
+        LobbyMemberData[] members = new LobbyMemberData[memberCount];
+
+        CSteamID lobbyOwner = SteamMatchmaking.GetLobbyOwner(currentLobbyID);
+
+        for (int i = 0; i < memberCount; i++)
+        {
+            CSteamID memberID = SteamMatchmaking.GetLobbyMemberByIndex(currentLobbyID, i);
+            members[i] = new LobbyMemberData(memberID);
+            members[i].isHost = (memberID == lobbyOwner);
+            members[i].avatar = SteamAvatarLoader.Instance.GetSteamAvatar(memberID);
+        }
+
+        return members;
     }
 
     #endregion
@@ -184,25 +143,21 @@ public class SteamLobbyManager : MonoBehaviour
         currentLobbyID = new CSteamID(callback.m_ulSteamIDLobby);
         Debug.Log($"Steam lobby created: {currentLobbyID}");
 
-        // Generer unikt Photon session navn
         string photonSessionName = GenerateSessionName();
 
-        // Gem Photon session navn i Steam lobby metadata
+        // Store Photon session info in Steam lobby metadata
         SteamMatchmaking.SetLobbyData(currentLobbyID, "PhotonSession", photonSessionName);
         SteamMatchmaking.SetLobbyData(currentLobbyID, "HostName", SteamManager.Instance.PlayerName);
-
-        // Gør lobby joinable
         SteamMatchmaking.SetLobbyJoinable(currentLobbyID, true);
 
         Debug.Log($"Photon session name: {photonSessionName}");
 
-        // Trigger event så Photon kan starte
         OnPhotonSessionCreated?.Invoke(photonSessionName);
     }
 
     private void OnLobbyJoinRequested(GameLobbyJoinRequested_t callback)
     {
-        // Triggered når nogen accepterer en invite eller klikker "Join Game"
+        // Triggered when user accepts invite or clicks "Join Game" in Steam overlay
         Debug.Log($"Lobby join requested: {callback.m_steamIDLobby}");
         SteamMatchmaking.JoinLobby(callback.m_steamIDLobby);
     }
@@ -220,7 +175,6 @@ public class SteamLobbyManager : MonoBehaviour
 
         Debug.Log($"Entered Steam lobby: {currentLobbyID}");
 
-        // Hent Photon session info fra lobby metadata
         string photonSessionName = SteamMatchmaking.GetLobbyData(currentLobbyID, "PhotonSession");
         string hostName = SteamMatchmaking.GetLobbyData(currentLobbyID, "HostName");
 
@@ -233,8 +187,37 @@ public class SteamLobbyManager : MonoBehaviour
 
         Debug.Log($"Joining Photon session: {photonSessionName} (Host: {hostName})");
 
-        // Trigger event så Photon kan joine
         OnPhotonSessionJoined?.Invoke(photonSessionName);
+    }
+
+    private void OnLobbyChatUpdate(LobbyChatUpdate_t callback)
+    {
+        CSteamID lobbyID = new CSteamID(callback.m_ulSteamIDLobby);
+        CSteamID userChanged = new CSteamID(callback.m_ulSteamIDUserChanged);
+        EChatMemberStateChange stateChange = (EChatMemberStateChange)callback.m_rgfChatMemberStateChange;
+        string userName = SteamFriends.GetFriendPersonaName(userChanged);
+
+        Debug.Log($"[STEAM] ============ LOBBY CHAT UPDATE ============");
+        Debug.Log($"[STEAM] User: {userName} ({userChanged})");
+        Debug.Log($"[STEAM] State Change: {stateChange}");
+        Debug.Log($"[STEAM] Current member count: {SteamMatchmaking.GetNumLobbyMembers(currentLobbyID)}");
+
+        switch (stateChange)
+        {
+            case EChatMemberStateChange.k_EChatMemberStateChangeEntered:
+                Debug.Log($"[STEAM] {userName} joined the lobby");
+                break;
+            case EChatMemberStateChange.k_EChatMemberStateChangeLeft:
+                Debug.Log($"[STEAM] {userName} left the lobby");
+                break;
+            case EChatMemberStateChange.k_EChatMemberStateChangeDisconnected:
+                Debug.Log($"[STEAM] {userName} disconnected");
+                break;
+        }
+
+        Debug.Log($"[STEAM] Invoking OnLobbyMembersUpdated event...");
+        OnLobbyMembersUpdated?.Invoke();
+        Debug.Log($"[STEAM] ============================================");
     }
 
     private void OnLobbyList(LobbyMatchList_t callback)
@@ -255,7 +238,7 @@ public class SteamLobbyManager : MonoBehaviour
 
     private string GenerateSessionName()
     {
-        // Kombination af Steam ID og timestamp sikrer unikhed
+        // Combine Steam ID and timestamp to ensure uniqueness
         return $"Session_{SteamManager.Instance.SteamID}_{System.DateTime.Now.Ticks}";
     }
 }
