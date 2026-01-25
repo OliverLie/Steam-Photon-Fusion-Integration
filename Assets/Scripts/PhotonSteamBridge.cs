@@ -139,7 +139,16 @@ public class PhotonSteamBridge : MonoBehaviour, INetworkRunnerCallbacks
     public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason)
     {
         Debug.LogWarning($"[PHOTON] Shutdown called! Reason: {shutdownReason}");
+
+        // Clean up runner
+        if (this.runner == runner)
+        {
+            this.runner = null;
+        }
+
+        // Leave Steam lobby
         steamLobbyManager.LeaveLobby();
+
         isStarting = false;
     }
 

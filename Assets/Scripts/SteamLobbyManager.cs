@@ -51,11 +51,20 @@ public class SteamLobbyManager : MonoBehaviour
 
     public void CreateLobby()
     {
+        Debug.Log($"[STEAM] CreateLobby called. Currently in lobby: {IsInLobby}");
+
         if (!SteamManager.IsInitialized)
         {
             Debug.LogError("Cannot create lobby - Steam not initialized");
             OnLobbyCreateFailed?.Invoke("Steam not initialized");
             return;
+        }
+
+        // VIGTIGT: Hvis vi allerede er i en lobby, leave først!
+        if (IsInLobby)
+        {
+            Debug.LogWarning("[STEAM] Already in lobby! Leaving first...");
+            LeaveLobby();
         }
 
         Debug.Log($"Creating Steam lobby (Max players: {maxPlayers})...");
@@ -124,11 +133,14 @@ public class SteamLobbyManager : MonoBehaviour
     }
     public void LeaveLobby()
     {
+        Debug.Log($"[STEAM] LeaveLobby called. IsInLobby: {IsInLobby}");
+
         if (IsInLobby)
         {
             Debug.Log($"[STEAM] Leaving lobby: {currentLobbyID}");
             SteamMatchmaking.LeaveLobby(currentLobbyID);
             currentLobbyID = CSteamID.Nil;
+            Debug.Log("[STEAM] Lobby left successfully");
         }
         else
         {
