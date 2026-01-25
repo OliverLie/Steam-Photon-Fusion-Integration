@@ -292,23 +292,27 @@ public class LobbyUI : MonoBehaviour
 
         Debug.Log($"[UI] Updating UI for scene index: {sceneIndex}");
 
-        if (sceneIndex == mainMenu)
+        if (sceneIndex == mainMenu) // LOBBY/MAIN MENU SCENE
         {
+            // Lobby UI - synlig i main menu
             createLobbyButton.gameObject.SetActive(true);
             inviteFriendsButton.gameObject.SetActive(true);
             leaveLobbyButton.gameObject.SetActive(true);
             statusText.gameObject.SetActive(true);
 
+            // Game UI - skjult i main menu
             backToMenuButton.gameObject.SetActive(false);
             PlayerListPanel.SetActive(false);
         }
-        else
+        else // GAME SCENE
         {
-            createLobbyButton.gameObject.SetActive(false);
-            inviteFriendsButton.gameObject.SetActive(false);
-            leaveLobbyButton.gameObject.SetActive(false);
-            statusText.gameObject.SetActive(false);
+            // Lobby controls - stadig tilgængelige i game
+            createLobbyButton.gameObject.SetActive(false);     // Ikke nødvendigt i game
+            inviteFriendsButton.gameObject.SetActive(true);    // ← KAN INVITERE I GAME
+            leaveLobbyButton.gameObject.SetActive(true);       // ← KAN LEAVE I GAME
+            statusText.gameObject.SetActive(false);            // Ikke nødvendigt i game
 
+            // Game UI - synlig i game
             backToMenuButton.gameObject.SetActive(true);
             PlayerListPanel.SetActive(true);
         }
