@@ -34,7 +34,7 @@ string photonSessionName = $"Session_{SteamID}_{DateTime.Now.Ticks}";
 SteamMatchmaking.SetLobbyData(currentLobbyID, "PhotonSession", photonSessionName);
 ```
 
-![Lobby Creation Flow](data/images/LobbyCreationAndInvite.gif) 
+![Lobby Creation Flow](Assets/Materials/LobbyCreationAndInvite.gif) 
 *Example of creating a lobby and inviting friends through Steam overlay*
 
 **Key Components:**
@@ -97,7 +97,7 @@ sequenceDiagram
         Bridge->>User: Show error
     end
 ```
-\```
+
 **Technical Challenges Solved:**
 - Preventing multiple simultaneous session starts with `isStarting` flag
 - Cleaning up old NetworkRunners before creating new ones
@@ -117,8 +117,6 @@ public System.Action<CSteamID, Texture2D> OnAvatarLoaded;
 
 When an avatar finishes downloading, `AvatarImageLoaded_t` callback fires, triggering all subscribed UI elements to update automatically without manual polling.
 
-![Avatar Loading](path/to/avatar-loading.gif)
-*UI updating automatically as avatars download asynchronously*
 
 **Implementation Highlights:**
 - Placeholder avatars shown during download
@@ -136,8 +134,6 @@ private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
 }
 ```
 
-![Scene Transition](path/to/scene-transition.gif)
-*Lobby UI persisting across scene changes with automatic re-wiring*
 
 **Edge Cases Handled:**
 - Multiple EventSystems across scenes (auto-cleanup)
